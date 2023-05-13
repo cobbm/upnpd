@@ -4,6 +4,9 @@ bin/*
 # obj/ directory
 obj/*
 
+# log files
+*.log
+
 # Prerequisites
 *.d
 
