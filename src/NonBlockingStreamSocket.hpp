@@ -1,14 +1,14 @@
 #pragma once
 
-#include "Socket.hpp"
+#include "StreamSocket.hpp"
 
-class NonBlockingSocket : public Socket {
+class NonBlockingStreamSocket : public StreamSocket {
   public:
     // Socket *accept() override;
 
   protected:
-    NonBlockingSocket(int, int, int = 0, int = 0);
-    NonBlockingSocket(int);
+    NonBlockingStreamSocket(int, int = 0, int = 0);
+    NonBlockingStreamSocket(int, struct sockaddr *, socklen_t *);
 
     int _accept(struct sockaddr *, socklen_t *) override;
 

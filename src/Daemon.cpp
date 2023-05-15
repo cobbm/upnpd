@@ -58,7 +58,7 @@ void listenerThread() {
         // TODO: use select() instead
         std::this_thread::sleep_for(std::chrono::seconds(1));
 
-        std::unique_ptr<Socket> client(s.accept());
+        std::unique_ptr<StreamSocket> client(s.accept());
         if (!client) {
             continue;
         }

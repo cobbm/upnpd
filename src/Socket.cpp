@@ -5,8 +5,6 @@
 #include <system_error>
 #include <unistd.h>
 
-//#define UNUSED(__x__) (void)__x__
-
 Socket::Socket(int domain, int type, int protocol, int flags) {
     int sockfd = socket(domain, type, protocol);
     // if (sockfd == -1) {
@@ -20,48 +18,21 @@ Socket::Socket(int domain, int type, int protocol, int flags) {
         setFlags(flags);
 }
 
-Socket::Socket(int client_fd) : m_sockfd(client_fd) {
+Socket::Socket(int client_fd, struct sockaddr *addr, socklen_t *addrlen) : m_sockfd(client_fd) {
     if (m_sockfd < 0)
         throw std::runtime_error("Invalid file descriptor");
+
+    if (addr != nullptr && addrlen != nullptr) {
+        m_addr = *addr;
+        m_addrlen = *addrlen;
+        m_hasRemoteAddr = true;
+    } else if (addr != nullptr || addrlen != nullptr) {
+        throw std::runtime_error("Invalid remote address for socket");
+    }
 }
 
 Socket::~Socket() {
     close();
-}
-
-void Socket::connect(const std::string &address, int port) {
-    struct sockaddr_storage addr;
-    socklen_t addrlen;
-
-    _bind_sockaddr(address, port, &addr, &addrlen);
-    _connect(reinterpret_cast<sockaddr *>(&addr), addrlen);
-}
-
-void Socket::bind(const std::string &address, int port) {
-    struct sockaddr_storage addr;
-    socklen_t addrlen;
-
-    _bind_sockaddr(address, port, &addr, &addrlen);
-    _bind(reinterpret_cast<sockaddr *>(&addr), addrlen);
-}
-
-void Socket::listen(int backlog) {
-    if (m_sockfd < 0)
-        throw std::runtime_error("'listen()' called on closed socket");
-
-    if (::listen(m_sockfd, backlog) < 0)
-        throw std::system_error(errno, std::generic_category());
-}
-
-Socket *Socket::accept() {
-    struct sockaddr addr;
-    socklen_t addrlen;
-
-    int remote_fd = _accept(&addr, &addrlen);
-    if (remote_fd < 0)
-        return nullptr;
-
-    return _accept_fd(remote_fd);
 }
 
 void Socket::close() {
@@ -72,6 +43,7 @@ void Socket::close() {
     }
 }
 
+/*
 ssize_t Socket::send(const uint8_t *buff, size_t len, int flags) {
     int rLen = ::send(m_sockfd, buff, len, flags);
     if (rLen < 0) {
@@ -101,11 +73,57 @@ ssize_t Socket::receive(std::vector<uint8_t> &data) {
 
     return l;
 }
-
+*/
 bool Socket::hasFileDescriptor() {
     return m_sockfd >= 0;
 }
 
+void Socket::setAddressReuse(bool enabled) {
+    int reuse = (int)enabled;
+    setSockOpt(SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+}
+
+void Socket::setFlags(int flags) {
+    int fd_flags = fcntl(m_sockfd, F_GETFL, 0);
+    if (fd_flags < 0) {
+        // close();
+        throw std::system_error(errno, std::generic_category());
+    }
+
+    fd_flags |= flags;
+
+    int setResult = fcntl(m_sockfd, F_SETFL, fd_flags);
+    if (setResult < 0) {
+        // close();
+        throw std::system_error(errno, std::generic_category());
+    }
+}
+
+void Socket::clearFlags(int flags) {
+    int fd_flags = fcntl(m_sockfd, F_GETFL, 0);
+    if (fd_flags < 0) {
+        // close();
+        throw std::system_error(errno, std::generic_category());
+    }
+
+    fd_flags &= ~flags;
+
+    int setResult = fcntl(m_sockfd, F_SETFL, fd_flags);
+    if (setResult < 0) {
+        // close();
+        throw std::system_error(errno, std::generic_category());
+    }
+}
+
+void Socket::setSockOpt(int level, int option_name, const void *option_value, socklen_t option_len) {
+    int setResult = setsockopt(m_sockfd, level, option_name, option_value, option_len);
+    if (setResult < 0) {
+        // close();
+        throw std::system_error(errno, std::generic_category());
+    }
+}
+
+/*
 void Socket::_connect(struct sockaddr *addr, socklen_t addrlen) {
     if (m_sockfd < 0)
         throw std::runtime_error("'connect()' called on closed socket");
@@ -124,40 +142,6 @@ void Socket::_bind(struct sockaddr *addr, socklen_t addrlen) {
     }
 }
 
-void Socket::setFlags(int flags) {
-
-    int fd_flags = fcntl(m_sockfd, F_GETFL, 0);
-    if (fd_flags < 0) {
-        // close();
-        throw std::system_error(errno, std::generic_category());
-    }
-
-    fd_flags |= flags;
-
-    int setResult = fcntl(m_sockfd, F_SETFL, fd_flags);
-    if (setResult < 0) {
-        // close();
-        throw std::system_error(errno, std::generic_category());
-    }
-}
-
-void Socket::clearFlags(int flags) {
-
-    int fd_flags = fcntl(m_sockfd, F_GETFL, 0);
-    if (fd_flags < 0) {
-        // close();
-        throw std::system_error(errno, std::generic_category());
-    }
-
-    fd_flags &= ~flags;
-
-    int setResult = fcntl(m_sockfd, F_SETFL, fd_flags);
-    if (setResult < 0) {
-        // close();
-        throw std::system_error(errno, std::generic_category());
-    }
-}
-
 int Socket::_accept(struct sockaddr *addr, socklen_t *addrlen) {
     if (m_sockfd < 0)
         throw std::runtime_error("'accept()' called on closed socket");
@@ -168,4 +152,4 @@ int Socket::_accept(struct sockaddr *addr, socklen_t *addrlen) {
         throw std::system_error(errno, std::generic_category());
 
     return client_sockfd;
-}
+}*/
