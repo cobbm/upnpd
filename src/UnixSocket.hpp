@@ -6,6 +6,10 @@ class UnixSocket : public Socket {
   public:
     UnixSocket();
 
+    // UnixSocket *accept() override;
+    //
+    friend class NonBlockingUnixSocket;
+
   protected:
     UnixSocket(int);
 

@@ -3,6 +3,10 @@
 #include <string>
 #include <sys/socket.h>
 
+#include <vector>
+
+#define UNUSED(__x__) (void)__x__
+
 #define DEFAULT_BACKLOG 5
 
 class Socket {
@@ -18,6 +22,9 @@ class Socket {
     virtual ssize_t send(const uint8_t *, size_t, int = 0);
     virtual ssize_t receive(uint8_t *, size_t, int = 0);
 
+    ssize_t send(const std::vector<uint8_t> &);
+    ssize_t receive(std::vector<uint8_t> &);
+
     void setFlags(int);
     void clearFlags(int);
 
@@ -32,7 +39,7 @@ class Socket {
 
     void _connect(struct sockaddr *, socklen_t);
     void _bind(struct sockaddr *, socklen_t);
-    int _accept(struct sockaddr *, socklen_t *);
+    virtual int _accept(struct sockaddr *, socklen_t *);
 
     int m_sockfd = -1;
 };

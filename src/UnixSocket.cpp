@@ -3,8 +3,6 @@
 #include <string>
 #include <sys/un.h>
 
-#define UNUSED(__x__) (void)__x__
-
 UnixSocket::UnixSocket() : Socket(AF_UNIX, SOCK_STREAM, 0) {
 }
 

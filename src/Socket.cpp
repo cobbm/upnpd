@@ -1,12 +1,11 @@
 #include "Socket.hpp"
-#include <cerrno>
-
+//#include <cerrno>
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <system_error>
 #include <unistd.h>
 
-#define UNUSED(__x__) (void)__x__
+//#define UNUSED(__x__) (void)__x__
 
 Socket::Socket(int domain, int type, int protocol, int flags) {
     int sockfd = socket(domain, type, protocol);
@@ -59,6 +58,9 @@ Socket *Socket::accept() {
     socklen_t addrlen;
 
     int remote_fd = _accept(&addr, &addrlen);
+    if (remote_fd < 0)
+        return nullptr;
+
     return _accept_fd(remote_fd);
 }
 
@@ -80,12 +82,24 @@ ssize_t Socket::send(const uint8_t *buff, size_t len, int flags) {
 }
 
 ssize_t Socket::receive(uint8_t *buff, size_t len, int flags) {
-    int rLen = recv(m_sockfd, buff, len, flags);
+    int rLen = ::recv(m_sockfd, buff, len, flags);
     if (rLen < 0) {
         // close();
         throw std::system_error(errno, std::generic_category());
     }
     return rLen;
+}
+
+ssize_t Socket::send(const std::vector<uint8_t> &data) {
+    return (size_t)send(data.data(), data.size());
+}
+
+ssize_t Socket::receive(std::vector<uint8_t> &data) {
+    ssize_t l = receive(&data[0], data.capacity());
+    ssize_t newLength = l > 0 ? l : 0;
+    data.resize(newLength);
+
+    return l;
 }
 
 bool Socket::hasFileDescriptor() {
