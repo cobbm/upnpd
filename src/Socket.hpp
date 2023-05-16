@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <sys/socket.h>
 #include <tuple>
@@ -14,6 +15,8 @@ class Socket {
 
     bool hasFileDescriptor();
     void setAddressReuse(bool);
+
+    std::optional<std::tuple<std::string, int>> getAddress();
 
   protected:
     Socket(int, int, int = 0, int = 0);

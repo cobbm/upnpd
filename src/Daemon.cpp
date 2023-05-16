@@ -1,6 +1,7 @@
 #include "Daemon.hpp"
 
 #include "NonBlockingUnixSocket.hpp"
+#include "UDPSocket.hpp"
 #include "UnixSocket.hpp"
 #include <atomic>
 #include <csignal>
@@ -14,6 +15,48 @@ void upnpDiscover() {
     std::cout << "[Worker] Discovering UPnP devices..." << std::endl;
 
     // send UDP on broadcast 239.255.255.250:1900
+
+    // Create a UDP socket for sending the SSDP message
+    UDPSocket s;
+    // Enable reuse of the socket address
+    s.setAddressReuse(true);
+    // Set up the destination address and port for sending
+    std::string searchIp = "239.255.255.250";
+    int searchPort = 1900;
+    // Prepare the SSDP M-SEARCH message
+    std::string searchMsg = "M-SEARCH * HTTP/1.1\r\n"
+                            "Host: 239.255.255.250:1900\r\n"
+                            "ST: ssdp:all\r\n"
+                            "Man: \"ssdp:discover\"\r\n"
+                            "MX: 3\r\n\r\n";
+
+    std::vector<uint8_t> msgVector(searchMsg.begin(), searchMsg.end());
+
+    std::vector<uint8_t> reply;
+    reply.clear();
+    reply.resize(2048);
+
+    // Send the SSDP multicast message
+    int sentBytes = s.sendTo(searchIp, searchPort, msgVector);
+    if (sentBytes <= 0) {
+        std::cerr << "Failed to send SSDP message :(" << std::endl;
+        return;
+    }
+
+    // Wait for the response
+
+    std::tuple<ssize_t, std::string, int> reply_t = s.receiveFrom(reply);
+    if (std::get<0>(reply_t) <= 0) {
+        std::cerr << "No reply!" << std::endl;
+        return;
+    }
+
+    std::cout << "Reply from " << std::get<1>(reply_t) << ":" << std::to_string(std::get<2>(reply_t)) << " (" << std::to_string(reply.size()) << " bytes)"
+              << std::endl;
+    std::string reply_str(reply.begin(), reply.end());
+    std::cout << reply_str << std::endl;
+
+    std::cout << "Discover done" << std::endl;
 }
 
 //////////////////////////////////////////////////////
@@ -112,7 +155,7 @@ void workerThread() {
 
         std::cout << "[Worker] Waiting..." << std::endl;
 
-        bool hasCommand = true;
+        bool hasCommand = false;
         CommandType c = CommandType::NONE;
         {
             std::unique_lock<std::mutex> lock(listenerMutex);
@@ -123,12 +166,13 @@ void workerThread() {
                 if (listenerDataAvailable) {
                     std::cout << "[Worker] Data received from main thread!" << std::endl;
                     c = listenerCommand;
+                    hasCommand = true;
+
                     listenerDataAvailable = false;
                 }
-            } else {
-                hasCommand = false;
             }
         }
+
         if (hasCommand) {
             if (listenerCommand == CommandType::DISCOVER) {
                 upnpDiscover();

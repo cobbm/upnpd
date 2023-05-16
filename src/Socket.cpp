@@ -83,6 +83,12 @@ void Socket::setAddressReuse(bool enabled) {
     setSockOpt(SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
 }
 
+std::optional<std::tuple<std::string, int>> Socket::getAddress() {
+    if (!m_hasRemoteAddr)
+        return std::nullopt;
+    return _unbind_sockaddr(reinterpret_cast<struct sockaddr_storage *>(&m_addr), m_addrlen);
+}
+
 void Socket::setFlags(int flags) {
     int fd_flags = fcntl(m_sockfd, F_GETFL, 0);
     if (fd_flags < 0) {

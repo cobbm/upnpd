@@ -10,14 +10,6 @@ DgramSocket::DgramSocket(int client_fd, struct sockaddr *addr, socklen_t *addrle
 }
 
 ssize_t DgramSocket::sendTo(const std::string &address, int port, const uint8_t *buff, size_t len, int flags) {
-    /*
-    int rLen = ::send(m_sockfd, buff, len, flags);
-    if (rLen < 0) {
-        // close();
-        throw std::system_error(errno, std::generic_category());
-    }
-    return rLen;
-    */
     sockaddr_in remoteAddr;
     socklen_t addrlen;
 
@@ -31,11 +23,10 @@ ssize_t DgramSocket::sendTo(const std::string &address, int port, const uint8_t 
     }
     return sendResult;
 }
+
 std::tuple<ssize_t, std::string, int> DgramSocket::receiveFrom(uint8_t *buff, size_t len, int flags) {
     sockaddr_in remoteAddr;
     socklen_t addrlen;
-
-    //_bind_sockaddr(address, port, reinterpret_cast<sockaddr_storage *>(&remoteAddr), &addrlen);
 
     int receiveResult = ::recvfrom(m_sockfd, buff, len, flags, reinterpret_cast<sockaddr *>(&remoteAddr), &addrlen);
 

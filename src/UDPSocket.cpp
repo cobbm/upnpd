@@ -25,3 +25,19 @@ void UDPSocket::_bind_sockaddr(const std::string &address, int port, struct sock
 
     *addrlen = sizeof(sockaddr_in);
 }
+
+std::tuple<std::string, int> UDPSocket::_unbind_sockaddr(struct sockaddr_storage *addr, socklen_t addrlen) {
+    if (addr->ss_family == AF_INET) {
+        sockaddr_in *_addr = reinterpret_cast<sockaddr_in *>(addr);
+
+        char str[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &(_addr->sin_addr), str, INET_ADDRSTRLEN);
+        return std::tuple<std::string, int>(std::string(str), ntohs(_addr->sin_port));
+    } else {
+        sockaddr_in6 *_addr = reinterpret_cast<sockaddr_in6 *>(addr);
+
+        char str[INET6_ADDRSTRLEN];
+        inet_ntop(AF_INET6, &(_addr->sin6_addr), str, INET6_ADDRSTRLEN);
+        return std::tuple<std::string, int>(std::string(str), ntohs(_addr->sin6_port));
+    }
+}
