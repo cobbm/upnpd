@@ -3,7 +3,7 @@
 #include <arpa/inet.h>
 #include <system_error>
 
-DgramSocket::DgramSocket(int domain, int protocol, int flags) : Socket(domain, SOCK_DGRAM, protocol, flags) {
+DgramSocket::DgramSocket(int domain, int protocol /*, int flags*/) : Socket(domain, SOCK_DGRAM, protocol /*, flags*/) {
 }
 
 DgramSocket::DgramSocket(int client_fd, struct sockaddr *addr, socklen_t *addrlen) : Socket(client_fd, addr, addrlen) {
@@ -17,7 +17,7 @@ ssize_t DgramSocket::sendTo(const std::string &address, int port, const uint8_t 
 
     int sendResult = ::sendto(m_sockfd, buff, len, flags, reinterpret_cast<sockaddr *>(&remoteAddr), addrlen);
 
-    if (sendResult < 0) {
+    if (sendResult < 0 && !(errno == EAGAIN || errno == EWOULDBLOCK)) {
         // close();
         throw std::system_error(errno, std::generic_category());
     }
@@ -30,12 +30,13 @@ std::tuple<ssize_t, std::string, int> DgramSocket::receiveFrom(uint8_t *buff, si
 
     int receiveResult = ::recvfrom(m_sockfd, buff, len, flags, reinterpret_cast<sockaddr *>(&remoteAddr), &addrlen);
 
-    auto from = _unbind_sockaddr(reinterpret_cast<sockaddr_storage *>(&remoteAddr), addrlen);
-
-    if (receiveResult < 0) {
+    if (receiveResult < 0 && !(errno == EAGAIN || errno == EWOULDBLOCK)) {
         // close();
         throw std::system_error(errno, std::generic_category());
     }
+
+    auto from = _unbind_sockaddr(reinterpret_cast<sockaddr_storage *>(&remoteAddr), addrlen);
+
     return std::tuple<ssize_t, std::string, int>(receiveResult, std::get<0>(from), std::get<1>(from));
 }
 

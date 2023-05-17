@@ -49,12 +49,23 @@ CXXFLAGS = $(_CXXFLAGS) $(LIBS) $(INCLUDE)
 
 LDFLAGS = $(_LDFLAGS)
 
-##### User Rules ##################################################################################
-
 ##### Dependency Rules ############################################################################
 .PHONY: run clean
 
-# HANDLED BY PSP_SDK
+all: prebuild_step $(_BDIR)/$(_PROJ) postbuild_step
+##### User Rules ##################################################################################
+prebuild_step: ;
+#	@echo "Building..."
+
+
+postbuild_step:
+#	@echo "Finished building..."
+#	@echo "Signing built executable ${CYAN}$(_BDIR)/$(_PROJ)${NC}..."
+#	sudo codesign --sign - $(_BDIR)/$(_PROJ)
+#	codesign -s "Michael Signing Identity" -f $(_BDIR)/$(_PROJ) --deep   
+	sudo codesign -s - $(_BDIR)/$(_PROJ) --force 
+##### Dependency Rules ############################################################################
+
 # Link all compiled object files
 $(_BDIR)/$(_PROJ): $(OBJS_CPP) $(OBJS_ASM)
 	@echo "Linking object files ${PURPLE}$^${NC}..." 
@@ -66,15 +77,6 @@ $(_ODIR)/%.o: $(_SDIR)/%.$(_SPPSUF) $(HEDRS_CPP) | $(_ODIR) $(_BDIR)
 	@echo "Compiling C++ source file ${PURPLE}$<${NC}..."
 	$(CXX) $(CXXFLAGS) -c -o $@ $< 
 
-# Compile all outdated source files into their respective object files
-$(_ODIR)/%.o: $(_COMMONDIR)/%.$(_SPPSUF) $(HEDRS_CPP) | $(_ODIR) $(_BDIR)
-	@echo "Compiling C++ source file ${PURPLE}$<${NC}..."
-	$(CXX) $(CXXFLAGS) -c -o $@ $< 
-
-# Compile all outdated source files into their respective object files
-$(_ODIR)/%.o: demos/TestApplication/%.$(_SPPSUF) $(HEDRS_CPP) | $(_ODIR) $(_BDIR)
-	@echo "Compiling C++ source file ${PURPLE}$<${NC}..."
-	$(CXX) $(CXXFLAGS) -c -o $@ $< 
 
 # Ensure target folders for binaries exist and run any additional user defined shell script
 $(_ODIR):
@@ -86,3 +88,6 @@ $(_BDIR):
 clean:
 	@echo "Cleaning up..." 
 	rm -rf $(_BDIR) $(_ODIR) $(_SDIR)/*~ $(_HDIR)/*~ $(TARGET)
+
+run: all
+	$(_BDIR)/$(_PROJ)

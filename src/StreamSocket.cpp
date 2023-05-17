@@ -2,7 +2,7 @@
 
 #include <system_error>
 
-StreamSocket::StreamSocket(int domain, int protocol, int flags) : Socket(domain, SOCK_STREAM, protocol, flags) {
+StreamSocket::StreamSocket(int domain, int protocol /*, int flags*/) : Socket(domain, SOCK_STREAM, protocol /*, flags*/) {
 }
 
 StreamSocket::StreamSocket(int client_fd, struct sockaddr *addr, socklen_t *addrlen) : Socket(client_fd, addr, addrlen) {
@@ -45,7 +45,7 @@ StreamSocket *StreamSocket::accept() {
 
 ssize_t StreamSocket::send(const uint8_t *buff, size_t len, int flags) {
     int rLen = ::send(m_sockfd, buff, len, flags);
-    if (rLen < 0) {
+    if (rLen < 0 && !(errno == EAGAIN || errno == EWOULDBLOCK)) {
         // close();
         throw std::system_error(errno, std::generic_category());
     }
@@ -54,7 +54,7 @@ ssize_t StreamSocket::send(const uint8_t *buff, size_t len, int flags) {
 
 ssize_t StreamSocket::receive(uint8_t *buff, size_t len, int flags) {
     int rLen = ::recv(m_sockfd, buff, len, flags);
-    if (rLen < 0) {
+    if (rLen < 0 && !(errno == EAGAIN || errno == EWOULDBLOCK)) {
         // close();
         throw std::system_error(errno, std::generic_category());
     }
@@ -97,8 +97,9 @@ int StreamSocket::_accept(struct sockaddr *addr, socklen_t *addrlen) {
 
     int client_sockfd = ::accept(m_sockfd, addr, addrlen);
 
-    if (client_sockfd < 0)
+    if (client_sockfd < 0 && !(errno == EAGAIN || errno == EWOULDBLOCK)) {
         throw std::system_error(errno, std::generic_category());
+    }
 
     return client_sockfd;
 }

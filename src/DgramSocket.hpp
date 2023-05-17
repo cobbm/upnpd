@@ -17,7 +17,7 @@ class DgramSocket : public Socket {
     std::tuple<ssize_t, std::string, int> receiveFrom(std::vector<uint8_t> &);
 
   protected:
-    DgramSocket(int, int = 0, int = 0);
+    DgramSocket(int, int = 0 /*, int = 0*/);
     DgramSocket(int, struct sockaddr *, socklen_t *);
 
     // Socket *_accept_fd(int, struct sockaddr *, socklen_t *) override;

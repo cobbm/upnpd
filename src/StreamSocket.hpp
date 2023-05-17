@@ -25,7 +25,7 @@ class StreamSocket : public Socket {
     ssize_t receive(std::vector<uint8_t> &);
 
   protected:
-    StreamSocket(int, int = 0, int = 0);
+    StreamSocket(int, int = 0 /*, int = 0*/);
     StreamSocket(int, struct sockaddr *, socklen_t *);
 
     virtual StreamSocket *_accept_fd(int, struct sockaddr *, socklen_t *) = 0;
