@@ -4,6 +4,7 @@
 #include "UnixSocket.hpp"
 #include <iostream>
 #include <unistd.h>
+#include <cstring>
 
 int parseArgs(Args &args, int argc, char *argv[]) {
     int i = 1;

@@ -4,10 +4,11 @@
 #include <string>
 #include <sys/socket.h>
 #include <tuple>
+#include <stdexcept>
 
-#ifdef __linux__
-#include <sys/epoll.h>
-#endif
+//#ifdef __linux__
+//#include <sys/epoll.h>
+//#endif
 
 #define UNUSED(__x__) (void)__x__
 
@@ -53,6 +54,7 @@ class Socket {
     bool m_isAddressReuse;
 };
 
+/*
 #ifdef __linux__
 class SocketPoller {
     SocketPoller(std::initializer_list<Socket &> sockets) {
@@ -69,3 +71,4 @@ class SocketPoller {
     struct epoll_event m_event;
 };
 #endif
+*/

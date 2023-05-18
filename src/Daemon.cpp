@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <unordered_map>
 #include <vector>
+#include <memory>
 
 #define LISTENER_SELECT_TIMEOUT 15
 #define WORKER_CV_TIMEOUT 15

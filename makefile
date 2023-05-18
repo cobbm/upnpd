@@ -63,7 +63,7 @@ postbuild_step:
 #	@echo "Signing built executable ${CYAN}$(_BDIR)/$(_PROJ)${NC}..."
 #	sudo codesign --sign - $(_BDIR)/$(_PROJ)
 #	codesign -s "Michael Signing Identity" -f $(_BDIR)/$(_PROJ) --deep   
-	sudo codesign -s - $(_BDIR)/$(_PROJ) --force 
+	sudo codesign -s - $(_BDIR)/$(_PROJ) || true 
 ##### Dependency Rules ############################################################################
 
 # Link all compiled object files
