@@ -7,11 +7,13 @@
 #include <iostream>
 // #include <thread>
 #include <algorithm>
+#include <memory>
 #include <sstream>
 #include <unistd.h>
 #include <unordered_map>
 #include <vector>
-#include <memory>
+
+#include "Http.hpp"
 
 #define LISTENER_SELECT_TIMEOUT 15
 #define WORKER_CV_TIMEOUT 15
@@ -26,123 +28,11 @@ void sigint_handler(int signum) {
     daemonExit = true;
 }
 
-int vtoi(const std::vector<uint8_t> &vec) {
-    int value = 0;
-    // convert to integer:
-    for (auto code : vec) {
-        value = value * 10 + (code - '0');
-    }
-    return value;
-}
+HTTP::Response makeSSDPRequest(const std::string &ip, int port, const std::string &method, const std::string &path,
+    const std::unordered_map<std::string, std::string> &headers, long timeout = 10) {
 
-void serialiseSSDPRequest(std::vector<uint8_t> &buff, const std::string &ip, int port, const std::string &method, const std::string &path,
-    const std::unordered_map<std::string, std::string> &headers) {
-
-    /*
-        M-SEARCH * HTTP/1.1\r\n
-        Host: 239.255.255.250:1900\r\n
-        ST: ssdp:all\r\n
-        Man: \"ssdp:discover\"\r\n
-        MX: 3\r\n\r\n
-    */
-
-    // construct the message:
-    std::stringstream ss;
-    ss << method << " " << path << " "
-       << "HTTP/"
-       << "1.1"
-       << "\r\n";
-    ss << "Host"
-       << ": " << ip << ":" << port << "\r\n";
-    for (const auto &i : headers) {
-        ss << i.first << ": " << i.second << "\r\n";
-    }
-    ss << "\r\n";
-
-    // sendBuff.insert(sendBuff.end(), method.begin(), method.end());
-    // sendBuff.insert(sendBuff.end(), ss.begin(), ss.end());
-
-    buff.clear();
-    std::copy(std::istreambuf_iterator<char>(ss), std::istreambuf_iterator<char>(), std::back_inserter(buff));
-}
-
-std::pair<int, std::unordered_map<std::string, std::string>> parseSSDPResponse(std::vector<uint8_t> &buff) {
-
-    /*
-        HTTP/1.1 200 OK
-        Server: Custom/1.0 UPnP/1.0 Proc/Ver
-        EXT:
-        Location: http://192.168.0.1:5431/dyndev/uuid:3c9ec793-3e70-703e-93c7-9e3c9e93700000
-        Cache-Control:max-age=1800
-        ST:upnp:rootdevice
-        USN:uuid:3c9ec793-3e70-703e-93c7-9e3c9e93700000::upnp:rootdevice
-    */
-
-    std::unordered_map<std::string, std::string> headers;
-
-    // parse response
-    auto iter = buff.begin();
-    auto end = buff.end();
-
-    std::vector<uint8_t> terminator{ '\r', '\n' };
-    std::vector<uint8_t> headerSep{ ':' };
-
-    bool isStatusLine = true;
-
-    int responseCode = -1;
-    std::unordered_map<std::string, std::string> receivedHeaders;
-
-    while (iter < end - 2) {
-        auto chunkStart = iter;
-        auto chunkEnd = std::search(iter, end, terminator.begin(), terminator.end());
-
-        std::string line(chunkStart, chunkEnd);
-        if (isStatusLine) {
-            std::cout << "Status Line: " << line << std::endl;
-            isStatusLine = false;
-
-            int statusParts = 0;
-            auto partStart = chunkStart;
-            while (statusParts < 3 && partStart < chunkEnd) {
-                auto partEnd = std::find(partStart, chunkEnd, ' ');
-
-                if (statusParts == 1) {
-                    std::vector<uint8_t> subPart(partStart, partEnd);
-                    responseCode = vtoi(subPart);
-                }
-                ++statusParts;
-                partStart = std::next(partEnd, 1);
-            }
-            if (statusParts != 3 || partStart < chunkEnd)
-                throw std::runtime_error("Failed to parse HTTP status line");
-
-        } else {
-
-            auto keyEnd = std::find(chunkStart, chunkEnd, ':');
-            if (keyEnd >= chunkEnd) {
-                throw std::runtime_error("Failed to parse HTTP header - ':' not found!");
-            }
-
-            auto valueStart = keyEnd + 1;
-            if (*(valueStart) == ' ') {
-                ++valueStart;
-            }
-
-            std::string key(chunkStart, keyEnd);
-            std::transform(key.begin(), key.end(), key.begin(), ::tolower);
-
-            receivedHeaders.insert(std::make_pair(key, std::string(valueStart, chunkEnd)));
-        }
-        // Advance the iterator to the next chunk
-        iter = std::next(chunkEnd, 2);
-    }
-
-    return std::pair<int, std::unordered_map<std::string, std::string>>(responseCode, receivedHeaders);
-}
-
-std::pair<int, std::unordered_map<std::string, std::string>> makeSSDPRequest(const std::string &ip, int port, const std::string &method,
-    const std::string &path, const std::unordered_map<std::string, std::string> &headers, long timeout) {
-    std::cout << "[Listener] Making SSDP request to " << ip << ":" << port << std::endl;
+    std::string host = ip + ":" + std::to_string(port);
+    std::cout << "[Listener] Making SSDP request to " << host << std::endl;
 
     std::vector<uint8_t> replyBuff;
     replyBuff.clear();
@@ -157,12 +47,17 @@ std::pair<int, std::unordered_map<std::string, std::string>> makeSSDPRequest(con
 
     // construct the message:
     std::vector<uint8_t> sendBuff;
-    serialiseSSDPRequest(sendBuff, ip, port, method, path, headers);
+    // serialiseSSDPRequest(sendBuff, ip, port, method, path, headers);
+    HTTP::Request req(method, path, host);
+    for (const auto &i : headers) {
+        req.addHeader(i.first, i.second);
+    }
+    req.build(sendBuff);
 
     // Send the SSDP multicast message
     int sentBytes = s.sendTo(ip, port, sendBuff);
     if (sentBytes <= 0) {
-        throw std::runtime_error("Failed to send UDP message to " + ip + ":" + std::to_string(port));
+        throw std::runtime_error("Failed to send UDP message to " + host);
     }
 
     // Wait for the response
@@ -174,14 +69,14 @@ std::pair<int, std::unordered_map<std::string, std::string>> makeSSDPRequest(con
 
     std::tuple<ssize_t, std::string, int> reply_t = s.receiveFrom(replyBuff);
     if (std::get<0>(reply_t) <= 0) {
-        throw std::runtime_error("No reply from " + ip + ":" + std::to_string(port));
+        throw std::runtime_error("No reply from " + host);
     }
 
     std::cout << "[Listener] SSDP Reply from " << std::get<1>(reply_t) << ":" << std::to_string(std::get<2>(reply_t)) << " ("
               << std::to_string(replyBuff.size()) << " bytes)" << std::endl;
 
-    // parse the response
-    return parseSSDPResponse(replyBuff);
+    // parse & return the response
+    return HTTP::Response(replyBuff);
 }
 
 void upnpDiscover() {
@@ -190,14 +85,18 @@ void upnpDiscover() {
 
     std::unordered_map<std::string, std::string> headers({ { "ST", "ssdp:all" }, { "Man", "\"ssdp:discover\"" }, { "MX", "3" } });
 
-    auto response = makeSSDPRequest("239.255.255.250", 1900, "M-SEARCH", "*", headers, 10);
+    auto response = makeSSDPRequest("239.255.255.250", 1900, "M-SEARCH", "*", headers);
 
-    std::cout << "[Listener] SSDP Response code: " << response.first << std::endl;
+    std::cout << "[Listener] SSDP Response status code: " << response.getStatusCode() << std::endl;
 
-    if (response.first > 200 || response.first > 399)
-        throw std::runtime_error("Received non-ok response code " + std::to_string(response.first));
+    if (!response.ok())
+        throw std::runtime_error("Received non-ok response code " + std::to_string(response.getStatusCode()));
 
-    std::cout << "[Listener] UPnP device location: '" << response.second["location"] << "'" << std::endl;
+    auto loc = response.getHeader("location");
+    if (!loc.has_value())
+        throw std::runtime_error("Missing 'location' header in response");
+
+    std::cout << "[Listener] UPnP device location: '" << loc.value() << "'" << std::endl;
 
     std::cout << "[Listener] Discover done" << std::endl;
 }
