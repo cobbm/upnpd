@@ -39,3 +39,6 @@ obj/*
 *.exe
 *.out
 *.app
+
+test/*
+test.cpp
