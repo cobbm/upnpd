@@ -1,0 +1,23 @@
+#pragma once
+
+#include "StreamSocket.hpp"
+
+class TCPSocket : public StreamSocket {
+  public:
+    TCPSocket();
+
+    /*
+    ssize_t sendTo(const std::string &, int, const uint8_t *, size_t, int = 0);
+    ssize_t receiveFrom(const std::string &, int, uint8_t *, size_t, int = 0);
+
+    ssize_t sendTo(const std::string &, int, const std::vector<uint8_t> &);
+    ssize_t receiveFrom(const std::string &, int, std::vector<uint8_t> &);
+*/
+
+  protected:
+    TCPSocket(int, struct sockaddr *, socklen_t *);
+
+    StreamSocket *_accept_fd(int, struct sockaddr *, socklen_t *) override;
+    void _bind_sockaddr(const std::string &, int, struct sockaddr_storage *, socklen_t *) override;
+    std::tuple<std::string, int> _unbind_sockaddr(struct sockaddr_storage *, socklen_t) override;
+};

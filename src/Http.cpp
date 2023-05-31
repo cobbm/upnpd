@@ -14,6 +14,23 @@ namespace HTTP {
         return value;
     }
 
+    URL parseUrl(const std::string &url) {
+        std::regex urlRegex(R"(^(.*?):\/\/([^\/:]+)(?::(\d+))?(\/.*)?$)");
+
+        std::smatch matches;
+        if (std::regex_match(url, matches, urlRegex)) {
+            URL parsedUrl;
+            parsedUrl.protocol = matches[1].str();
+            parsedUrl.host = matches[2].str();
+            parsedUrl.port = std::stoi(matches[3].str());
+            parsedUrl.path = matches[4].str();
+
+            return parsedUrl;
+        } else {
+            throw std::runtime_error("Invalid URL format");
+        }
+    }
+
     Request::Request(const std::string &method, const std::string &path, const std::string &host) {
         setVersion(1, 1);
         setMethod(method);
@@ -69,6 +86,11 @@ namespace HTTP {
 
         buff.clear();
         std::copy(std::istreambuf_iterator<char>(ss), std::istreambuf_iterator<char>(), std::back_inserter(buff));
+
+        if (m_body.size() > 0) {
+            // TODO: is this the right way?
+            std::copy(m_body.begin(), m_body.end(), std::back_inserter(buff));
+        }
     }
 
     Response::Response(const std::vector<uint8_t> &from) {
@@ -155,6 +177,18 @@ namespace HTTP {
         if (it == m_headers.end())
             return std::nullopt;
         return it->second;
+    }
+
+    int Response::getVersionMinor() {
+        return m_versionMinor;
+    }
+
+    int Response::getVersionMajor() {
+        return m_versionMajor;
+    }
+
+    std::vector<uint8_t> &Response::getBody() {
+        return m_body;
     }
 
 }; // namespace HTTP

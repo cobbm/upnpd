@@ -77,8 +77,11 @@ void StreamSocket::_connect(struct sockaddr *addr, socklen_t addrlen) {
     if (m_sockfd < 0)
         throw std::runtime_error("'connect()' called on closed socket");
 
-    if (::connect(m_sockfd, addr, addrlen) < 0)
+    int connect_result = ::connect(m_sockfd, addr, addrlen);
+
+    if (connect_result < 0 && !(m_isNonBlocking && errno == EINPROGRESS)) {
         throw std::system_error(errno, std::generic_category());
+    }
 }
 
 void StreamSocket::_bind(struct sockaddr *addr, socklen_t addrlen) {

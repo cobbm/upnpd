@@ -1,21 +1,20 @@
-#include "UDPSocket.hpp"
+#include "TCPSocket.hpp"
 #include <arpa/inet.h>
 #include <cstring>
 #include <string>
 #include <system_error>
 
-UDPSocket::UDPSocket() : DgramSocket(AF_INET, 0) {
+TCPSocket::TCPSocket() : StreamSocket(AF_INET, 0) {
 }
 
-UDPSocket::UDPSocket(int client_fd, struct sockaddr *addr, socklen_t *addrlen) : DgramSocket(client_fd, addr, addrlen) {
+TCPSocket::TCPSocket(int client_fd, struct sockaddr *addr, socklen_t *addrlen) : StreamSocket(client_fd, addr, addrlen) {
 }
 
-/*
-Socket *UDPSocket::_accept_fd(int client_fd, struct sockaddr *addr, socklen_t *addrlen) {
-    return new UDPSocket(client_fd, addr, addrlen);
-}*/
+StreamSocket *TCPSocket::_accept_fd(int client_fd, struct sockaddr *addr, socklen_t *addrlen) {
+    return new TCPSocket(client_fd, addr, addrlen);
+}
 
-void UDPSocket::_bind_sockaddr(const std::string &address, int port, struct sockaddr_storage *addr, socklen_t *addrlen) {
+void TCPSocket::_bind_sockaddr(const std::string &address, int port, struct sockaddr_storage *addr, socklen_t *addrlen) {
     sockaddr_in *local = reinterpret_cast<sockaddr_in *>(addr);
     std::memset(local, 0, sizeof(sockaddr_in));
 
@@ -26,7 +25,7 @@ void UDPSocket::_bind_sockaddr(const std::string &address, int port, struct sock
     *addrlen = sizeof(sockaddr_in);
 }
 
-std::tuple<std::string, int> UDPSocket::_unbind_sockaddr(struct sockaddr_storage *addr, socklen_t addrlen) {
+std::tuple<std::string, int> TCPSocket::_unbind_sockaddr(struct sockaddr_storage *addr, socklen_t addrlen) {
     UNUSED(addrlen);
 
     if (addr->ss_family == AF_INET) {

@@ -1,37 +1,25 @@
+#pragma once
+
+#include <regex>
 #include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-#include <string>
-
 namespace HTTP {
 
-    bool chariequals(char a, char b);
-
-    int vtoi(const std::vector<uint8_t> &vec);
-
-    /*
-    struct HTTPHeaderComp {
-        bool operator()(const std::string &lhs, const std::string &rhs) const {
-            return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), chariequals);
-        }
+    struct URL {
+        std::string protocol;
+        std::string host;
+        int port;
+        std::string path;
     };
 
-    struct comp {
-        bool operator()(const std::string &lhs, const std::string &rhs) const {
-            return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), [](char a, char b) { return tolower(a) == tolower(b); });
-        }
-    };
+    bool chariequals(char, char);
 
-    struct case_insensitive_map {
-        struct comp {
-            bool operator()(const std::string &lhs, const std::string &rhs) const {
-                // On non Windows OS, use the function "strcasecmp" in #include <strings.h>
-                return stricmp(lhs.c_str(), rhs.c_str()) < 0;
-            }
-        };
-    };*/
+    int vtoi(const std::vector<uint8_t> &);
+
+    URL parseUrl(const std::string &);
 
     struct case_insensitive_unordered_map {
         struct comp {
@@ -83,16 +71,6 @@ namespace HTTP {
         std::vector<uint8_t> m_body;
     };
 
-    /*
-            HTTP/1.1 200 OK
-            Server: Custom/1.0 UPnP/1.0 Proc/Ver
-            EXT:
-            Location: http://192.168.0.1:5431/dyndev/uuid:3c9ec793-3e70-703e-93c7-9e3c9e93700000
-            Cache-Control:max-age=1800
-            ST:upnp:rootdevice
-            USN:uuid:3c9ec793-3e70-703e-93c7-9e3c9e93700000::upnp:rootdevice
-        */
-
     class Response {
       public:
         Response(const std::vector<uint8_t> &);
@@ -102,6 +80,11 @@ namespace HTTP {
         bool ok();
 
         std::optional<const std::string> getHeader(const std::string &);
+
+        int getVersionMinor();
+        int getVersionMajor();
+
+        std::vector<uint8_t> &getBody();
 
       private:
         int m_versionMajor;
